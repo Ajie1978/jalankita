@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabungan Jalan Blok G</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+    .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h2, h3 { text-align: center; }
+    input, select, button { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #add8e6; }
+    tfoot td { font-weight: bold; }
+    @media(max-width: 600px) { input, select, button { font-size: 16px; } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>jalanKita</h2>
+  <h3>Tabungan Pengecoran Jalan - Komplek Pesona Rancamulya Blok G</h3>
+
+  <input type="text" id="nama" placeholder="Nama Warga">
+  <input type="text" id="nomorRumah" placeholder="Nomor Rumah (Contoh: 15)">
+  <input type="number" id="jumlah" placeholder="Nominal (Rp)">
+
+  <label>Tanggal Setoran:</label>
+  <div style="display: flex; gap: 10px;">
+    <select id="tanggal"></select>
+    <select id="bulan"></select>
+    <select id="tahun"></select>
+  </div>
+
+  <button onclick="simpanData()">Simpan Data</button>
+  <button onclick="downloadPDF()">Download Rekap PDF</button>
+
+  <table id="tabelRekap">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Tanggal</th>
+        <th>Nama</th>
+        <th>No Rumah</th>
+        <th>Nominal</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4">Jumlah</td>
+        <td id="totalNominal">0</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<script>
+  for (let i = 1; i <= 31; i++) {
+    document.getElementById("tanggal").innerHTML += `<option value="${i}">${i}</option>`;
+  }
+  const bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  bulan.forEach((b, i) => {
+    document.getElementById("bulan").innerHTML += `<option value="${i+1}">${b}</option>`;
+  });
+  for (let y = 2023; y <= new Date().getFullYear(); y++) {
+    document.getElementById("tahun").innerHTML += `<option value="${y}">${y}</option>`;
+  }
+
+  function simpanData() {
+    const nama = document.getElementById("nama").value.trim();
+    const nomor = document.getElementById("nomorRumah").value.trim();
+    const jumlah = parseInt(document.getElementById("jumlah").value.trim());
+    const tgl = `${document.getElementById("tanggal").value}-${document.getElementById("bulan").value}-${document.getElementById("tahun").value}`;
+
+    if (!nama || !nomor || !jumlah) return alert("Harap isi semua data!");
+
+    let data = JSON.parse(localStorage.getItem("tabunganJalan")) || [];
+    data.push({ nama, nomor, jumlah, tanggal: tgl });
+    localStorage.setItem("tabunganJalan", JSON.stringify(data));
+    tampilkanData();
+
+    document.getElementById("nama").value = "";
+    document.getElementById("nomorRumah").value = "";
+    document.getElementById("jumlah").value = "";
+  }
+
+  function tampilkanData() {
+    const tbody = document.querySelector("#tabelRekap tbody");
+    tbody.innerHTML = "";
+    let data = JSON.parse(localStorage.getItem("tabunganJalan")) || [];
+    let total = 0;
+
+    data.forEach((d, i) => {
+      total += d.jumlah;
+      const row = `<tr>
+        <td>${i + 1}</td>
+        <td>${d.tanggal}</td>
+        <td>${d.nama}</td>
+        <td>Blok G-${d.nomor}</td>
+        <td>Rp ${d.jumlah.toLocaleString()}</td>
+      </tr>`;
+      tbody.innerHTML += row;
+    });
+    document.getElementById("totalNominal").innerText = `Rp ${total.toLocaleString()}`;
+  }
+
+  function downloadPDF() {
+    let data = JSON.parse(localStorage.getItem("tabunganJalan")) || [];
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.text("jalanKita - Rekap Tabungan Blok G", 14, 14);
+    const rows = data.map((d, i) => [i + 1, d.tanggal, d.nama, `Blok G-${d.nomor}`, `Rp ${d.jumlah.toLocaleString()}`]);
+    const total = data.reduce((sum, d) => sum + d.jumlah, 0);
+    rows.push(["", "", "", "Jumlah", `Rp ${total.toLocaleString()}`]);
+    doc.autoTable({ head: [["No", "Tanggal", "Nama", "No Rumah", "Nominal"]], body: rows, startY: 20 });
+    doc.save("rekap_tabungan_jalan.pdf");
+  }
+
+  tampilkanData();
+</script>
+</body>
+</html>
